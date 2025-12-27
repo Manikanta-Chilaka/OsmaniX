@@ -1,1 +1,1 @@
-web: python manage.py migrate && gunicorn OsmaniX.wsgi
+python manage.py migrate && gunicorn OsmaniX.wsgi

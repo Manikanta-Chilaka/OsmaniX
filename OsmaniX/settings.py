@@ -26,11 +26,14 @@ SECRET_KEY = 'django-insecure-h)y1zy0p#6jn^@o1#w%93-fh-ue*=a_^le6re=woi&@g-nvhim
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    'osmanix-production.up.railway.app',
-    '.up.railway.app',
+    "osmanix-production.up.railway.app",
+    ".up.railway.app",
+    "localhost",
+    "127.0.0.1",
 ]
+
 CSRF_TRUSTED_ORIGINS = [
-    "https://osmanix-production.up.railway.app",
+    "https://osmanix-production.up.railway.app"
 ]
 
 # Application definition
