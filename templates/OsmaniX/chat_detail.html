@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block start %}
+<style>
+    /* Custom Chat Styles */
+    .chat-container {
+        max-width: 100%;
+        margin: 0;
+        background: #ffffff;
+        /* border-radius: 12px; Remove border radius for full screen */
+        box-shadow: none;
+        /* Shadow not needed for full screen */
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        /* Full viewport height */
+        overflow: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .chat-header {
+        background: #f8f9fa;
+        padding: 15px 20px;
+        border-bottom: 1px solid #eaeaea;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .chat-header h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        color: #333;
+        font-weight: 600;
+    }
+
+    .chat-box {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        background: #fcfcfc;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    /* Message Bubbles */
+    .message-wrapper {
+        display: flex;
+        width: 100%;
+    }
+
+    .message-wrapper.sent {
+        justify-content: flex-end;
+    }
+
+    .message-wrapper.received {
+        justify-content: flex-start;
+    }
+
+    .message-content {
+        max-width: 75%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .message-bubble {
+        padding: 10px 16px;
+        border-radius: 18px;
+        position: relative;
+        font-size: 0.95rem;
+        line-height: 1.5;
+        word-wrap: break-word;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .message-wrapper.sent .message-bubble {
+        background: #007bff;
+        color: white;
+        border-bottom-right-radius: 4px;
+    }
+
+    .message-wrapper.received .message-bubble {
+        background: #e9ecef;
+        color: #212529;
+        border-bottom-left-radius: 4px;
+    }
+
+    .message-sender {
+        font-size: 0.75rem;
+        margin-bottom: 4px;
+        color: #6c757d;
+        padding: 0 4px;
+    }
+
+    .message-wrapper.sent .message-sender {
+        text-align: right;
+        display: none;
+        /* Hide my own name for cleaner look */
+    }
+
+    /* Footer / Input Area */
+    .chat-footer {
+        padding: 15px;
+        background: #fff;
+        border-top: 1px solid #eaeaea;
+    }
+
+    .chat-form {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .chat-input {
+        flex: 1;
+        padding: 12px 20px;
+        border: 1px solid #dee2e6;
+        border-radius: 30px;
+        outline: none;
+        font-size: 1rem;
+        transition: all 0.2s;
+        background-color: #f8f9fa;
+    }
+
+    .chat-input:focus {
+        border-color: #007bff;
+        background-color: #fff;
+        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+    }
+
+    .send-btn {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 12px 25px;
+        border-radius: 30px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s, transform 0.1s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .send-btn:hover {
+        background: #0056b3;
+    }
+
+    .send-btn:active {
+        transform: scale(0.98);
+    }
+</style>
+
+<div class="chat-container">
+    <div class="chat-header">
+        <h3>Chat</h3>
+        <!-- Optional: Add helper controls or status here -->
+    </div>
+
+    <div id="chat-box" class="chat-box">
+        <p class="text-muted text-center" style="margin-top: auto; margin-bottom: auto;">Loading messages...</p>
+    </div>
+
+    <div class="chat-footer">
+        <form method="POST" class="chat-form">
+            {% csrf_token %}
+            <input type="text" name="text" class="chat-input" placeholder="Type a message..." required
+                autocomplete="off">
+            <button type="submit" class="send-btn">Send</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    const currentUser = "{{ request.user.username }}";
+    const chatBox = document.getElementById("chat-box");
+    // State to track if we should auto-scroll
+    let shouldScroll = true;
+
+    chatBox.addEventListener('scroll', () => {
+        // If user scrolls up, stop auto-scrolling
+        const isAtBottom = chatBox.scrollHeight - chatBox.scrollTop <= chatBox.clientHeight + 50;
+        shouldScroll = isAtBottom;
+    });
+
+    function loadMessages() {
+        fetch("{% url 'fetch_messages' conversation.id %}")
+            .then(response => response.json())
+            .then(data => {
+                // To avoid full repaint flickering, we could verify changes, 
+                // but sticking to simple logic with full innerHTML rewrite for now 
+                // as manual DOM diffing is complex without VDOM. 
+                // We'll regenerate the HTML string.
+
+                if (data.length === 0) {
+                    chatBox.innerHTML = '<p class="text-muted text-center" style="margin-top:auto; margin-bottom:auto;">No messages yet. Start the conversation!</p>';
+                    return;
+                }
+
+                let html = "";
+                data.forEach(msg => {
+                    const isMe = msg.sender === currentUser;
+                    const alignClass = isMe ? 'sent' : 'received';
+                    const nameHtml = isMe ? '' : `<div class="message-sender">${msg.sender}</div>`;
+
+                    html += `
+                        <div class="message-wrapper ${alignClass}">
+                            <div class="message-content">
+                                ${nameHtml}
+                                <div class="message-bubble">
+                                    ${msg.text}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                // Only update if content matches (rough check to avoid selection clear? difficult with innerHTML)
+                // For now, simply update.
+                if (chatBox.innerHTML !== html) {
+                    chatBox.innerHTML = html;
+                    if (shouldScroll) {
+                        chatBox.scrollTop = chatBox.scrollHeight;
+                    }
+                }
+            })
+            .catch(err => console.error("Error loading messages:", err));
+    }
+
+    // Load immediately
+    loadMessages();
+
+    // Poll every 1 second
+    setInterval(loadMessages, 1000);
+</script>
+
+{% endblock %}
