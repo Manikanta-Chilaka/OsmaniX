@@ -6,6 +6,7 @@ from accounts import views as account_views
 from posts import views as post_views
 
 urlpatterns = [
+    path('', RedirectView.as_view(url='/login/', permanent=False)),
     path('admin/', admin.site.urls),
     path('login/', account_views.login_view, name='login'),
     path('register/', account_views.register_view, name='register'),
