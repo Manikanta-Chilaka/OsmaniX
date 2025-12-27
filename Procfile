@@ -1,1 +1,1 @@
-web: gunicorn OsmaniX.wsgi --log-file -
+web: python manage.py migrate && gunicorn OsmaniX.wsgi
