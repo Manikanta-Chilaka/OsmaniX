@@ -1,1 +1,1 @@
-web: gunicorn OsmaniX.wsgi
+python manage.py migrate && python manage.py collectstatic --noinput && gunicorn OsmaniX.wsgi:application
