@@ -7,6 +7,7 @@ from django.views.decorators.cache import never_cache
 from django.contrib.auth import logout
 from django.shortcuts import render, get_object_or_404
 
+
 def login_view(request):
     if request.method == 'POST':
         username = request.POST.get('username').strip().lower()
